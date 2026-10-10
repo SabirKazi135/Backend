@@ -3,6 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 dotenv.config();
 import mongoose from "mongoose";
+
+import TodoModel from "./models/Todo.js";
 type Todo = {
   id: number;
   title: string;
@@ -13,48 +15,40 @@ const todos: Todo[] = [];
 app.use(cors());
 app.use(express.json());
 
-app.post("/todo", (req, res) => {
-  const todo: Todo = {
-    id: Date.now(),
+app.post("/todo", async (req, res) => {
+  const todo = await TodoModel.create({
     title: req.body.title,
-    completed: false,
-  };
+  });
 
-  todos.push(todo);
-
-  res.json(todo);
+  res.status(201).json(todo);
 });
 
-app.get("/todo", (req, res) => {
-  res.json(todos);
+app.get("/todo", async (req, res) => {
+  res.json(await TodoModel.find());
 });
 
-app.patch("/todo/:id", (req, res) => {
-  const id = Number(req.params.id);
-  const todo = todos.find((todo) => todo.id === id);
-  if (todo) {
-    todo.completed = true;
-  } else {
-    res.json({
-      message: "Not found id",
+app.patch("/todo/:id", async (req, res) => {
+  const updatedTodo = await TodoModel.findByIdAndUpdate(
+    req.params.id,
+    { completed: true },
+    { new: true },
+  );
+  if (!updatedTodo) {
+    return res.status(404).json({
+      message: "Todo not Found",
     });
-    return;
   }
-  res.json(todos);
+  res.json(updatedTodo);
 });
 
-app.delete("/todo/:id", (req, res) => {
-  const id = Number(req.params.id);
-  const index = todos.findIndex((todo) => todo.id === id);
-
-  if (index === -1) {
+app.delete("/todo/:id", async (req, res) => {
+  const deletedTodo = await TodoModel.findByIdAndDelete(req.params.id);
+  if (!deletedTodo) {
     res.status(404).json({
       message: "Todo not found",
     });
     return;
   }
-
-  todos.splice(index, 1);
 
   res.json(todos);
 });
