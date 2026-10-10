@@ -5,13 +5,8 @@ dotenv.config();
 import mongoose from "mongoose";
 
 import TodoModel from "./models/Todo.js";
-type Todo = {
-  id: number;
-  title: string;
-  completed: boolean;
-};
+
 const app = express();
-const todos: Todo[] = [];
 app.use(cors());
 app.use(express.json());
 
@@ -28,10 +23,19 @@ app.get("/todo", async (req, res) => {
 });
 
 app.patch("/todo/:id", async (req, res) => {
+  const updates: { title?: string; completed?: boolean } = {};
+
+  if (typeof req.body.title === "string") {
+    updates.title = req.body.title;
+  }
+  if (typeof req.body.completed === "boolean") {
+    updates.title = req.body.completed;
+  }
+
   const updatedTodo = await TodoModel.findByIdAndUpdate(
     req.params.id,
-    { completed: true },
-    { new: true },
+    updates,
+    { new: true, runValidators: true },
   );
   if (!updatedTodo) {
     return res.status(404).json({
@@ -50,7 +54,7 @@ app.delete("/todo/:id", async (req, res) => {
     return;
   }
 
-  res.json(todos);
+  res.json(deletedTodo);
 });
 
 async function startServer() {
