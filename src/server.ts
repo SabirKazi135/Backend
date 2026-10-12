@@ -3,58 +3,28 @@ import cors from "cors";
 import dotenv from "dotenv";
 dotenv.config();
 import mongoose from "mongoose";
-
-import TodoModel from "./models/Todo.js";
+import UrlModel from "./models/Url.js";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.post("/todo", async (req, res) => {
-  const todo = await TodoModel.create({
-    title: req.body.title,
+app.post("/api/shorten", async (req, res) => {
+  const url = req.body.originalUrl;
+  const code = Math.random().toString(36).slice(2, 8);
+
+  const shorten = await UrlModel.create({
+    originalUrl: url,
+    shortCode: code,
   });
 
-  res.status(201).json(todo);
+  res.status(201).json(shorten);
 });
 
-app.get("/todo", async (req, res) => {
-  res.json(await TodoModel.find());
-});
+app.get("/api/shorten", async (req, res) => {
+  const shortens = await UrlModel.find();
 
-app.patch("/todo/:id", async (req, res) => {
-  const updates: { title?: string; completed?: boolean } = {};
-
-  if (typeof req.body.title === "string") {
-    updates.title = req.body.title;
-  }
-  if (typeof req.body.completed === "boolean") {
-    updates.title = req.body.completed;
-  }
-
-  const updatedTodo = await TodoModel.findByIdAndUpdate(
-    req.params.id,
-    updates,
-    { new: true, runValidators: true },
-  );
-  if (!updatedTodo) {
-    return res.status(404).json({
-      message: "Todo not Found",
-    });
-  }
-  res.json(updatedTodo);
-});
-
-app.delete("/todo/:id", async (req, res) => {
-  const deletedTodo = await TodoModel.findByIdAndDelete(req.params.id);
-  if (!deletedTodo) {
-    res.status(404).json({
-      message: "Todo not found",
-    });
-    return;
-  }
-
-  res.json(deletedTodo);
+  res.json(shortens);
 });
 
 async function startServer() {
