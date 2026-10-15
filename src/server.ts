@@ -6,6 +6,7 @@ import bcrypt from "bcrypt";
 
 import Todo from "./models/Todo.js";
 import User from "./models/User.js";
+import jwt from "jsonwebtoken";
 
 const app = express();
 
@@ -57,6 +58,17 @@ app.post("/api/auth/login", async (req, res) => {
         message: "Invalid email or password",
       });
     }
+
+    const token = jwt.sign(
+      {
+        userId: user._id.toString(),
+      },
+
+      process.env.JWT_SECRET!,
+      {
+        expiresIn: "1h",
+      },
+    );
 
     return res.status(200).json({
       message: "Login successful",
