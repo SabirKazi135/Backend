@@ -73,10 +73,28 @@ app.post("/api/auth/login", async (req, res) => {
     return res.status(200).json({
       message: "Login successful",
       email: user.email,
+      token,
     });
   } catch (error) {
     return res.status(500).json({
       message: "Login failed",
+    });
+  }
+});
+
+app.post("/api/auth/verify", (req, res) => {
+  const { token } = req.body;
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!);
+
+    res.status(200).json({
+      message: "Token is valid",
+      decoded,
+    });
+  } catch {
+    res.status(401).json({
+      message: "Invalid or expired token",
     });
   }
 });
