@@ -388,3 +388,187 @@ if (!res.ok) throw new Error("Request failed");
 | Notes         | `title`, `content`         | `/notes`     |
 | Bookmarks     | `title`, `url`             | `/bookmarks` |
 | URL shortener | `originalUrl`, `shortCode` | `/urls`      |
+
+
+
+
+
+# BCRYPT — SYNTAX REFERENCE
+
+## 1. INSTALL BCRYPT
+
+```bash
+npm install bcrypt
+npm install -D @types/bcrypt
+```
+
+## 2. IMPORT — `index.ts`
+
+```ts
+import bcrypt from "bcrypt";
+```
+
+## 3. HASH PASSWORD — REGISTRATION
+
+```ts
+const password = "sabir123";
+
+// Hash the original password with cost factor 10
+const hashedPassword = await bcrypt.hash(password, 10);
+
+console.log(hashedPassword);
+```
+
+## 4. VERIFY PASSWORD — LOGIN
+
+```ts
+const submittedPassword = "sabir123";
+
+// Compare submitted password against the stored hash
+const isMatch = await bcrypt.compare(
+  submittedPassword,
+  hashedPassword,
+);
+
+console.log(isMatch); // true
+```
+
+### Wrong Password
+
+```ts
+const wrongPassword = "sabir124";
+
+// Returns false when the password doesn't match
+const isMatch = await bcrypt.compare(
+  wrongPassword,
+  hashedPassword,
+);
+
+console.log(isMatch); // false
+```
+
+## 5. REGISTRATION FLOW — EXPRESS + MONGOOSE
+
+```ts
+app.post("/api/auth/register", async (req, res) => {
+  const { name, email, password } = req.body;
+
+  // Hash password before storing it
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  // Save the hashed password in MongoDB
+  const createdUser = await UserModel.create({
+    name,
+    email,
+    password: hashedPassword,
+  });
+
+  // Return safe user data; never expose the password hash
+  return res.status(201).json({
+    name: createdUser.name,
+    email: createdUser.email,
+  });
+});
+```
+
+## 6. LOGIN FLOW — EXPRESS + MONGOOSE
+
+```ts
+app.post("/api/auth/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Find user by email
+    const user = await UserModel.findOne({ email });
+
+    // Reject if user doesn't exist
+    if (!user) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
+    }
+
+    // Compare submitted password with stored hash
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    // Reject if password is incorrect
+    if (!isMatch) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
+    }
+
+    // Credentials are valid
+    return res.status(200).json({
+      message: "Login successful",
+      email: user.email,
+    });
+  } catch (error) {
+    // Handle unexpected server or database errors
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+});
+```
+
+## 7. REUSABLE SYNTAX PATTERNS
+
+```ts
+// Hash a password
+const hash = await bcrypt.hash(password, 10);
+
+// Compare password with stored hash
+const isMatch = await bcrypt.compare(password, storedHash);
+
+// Save hash in MongoDB
+await UserModel.create({
+  name,
+  email,
+  password: hash,
+});
+
+// Check password verification result
+if (isMatch) {
+  // Password is correct
+} else {
+  // Password is incorrect
+}
+```
+
+## 8. IMPORTANT RULES
+
+- Registration: hash before saving.
+- Login: use `bcrypt.compare()`.
+- Database: never store plain-text passwords.
+- API response: never return passwords or password hashes.
+- Do not compare newly generated bcrypt hashes directly; use `bcrypt.compare()`.
+- Use `await` with both `bcrypt.hash()` and `bcrypt.compare()`.
+
+## 9. BCRYPT FLOW
+
+```text
+REGISTRATION
+    |
+    v
+Receive password
+    |
+    v
+bcrypt.hash(password, 10)
+    |
+    v
+Save hash in MongoDB
+    |
+    v
+LOGIN
+    |
+    v
+Find user by email
+    |
+    v
+bcrypt.compare(submittedPassword, user.password)
+    |
+    v
+true  -> Login successful
+false -> Reject login
+```

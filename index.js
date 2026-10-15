@@ -1,3 +1,5 @@
-const code = Math.random().toString(36).slice(2, 8);
+const url = new URL("hello");
 
-console.log(code);
+console.log(url.href);
+console.log(url.protocol);
+console.log(url.hostname);
