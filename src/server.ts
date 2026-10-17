@@ -7,6 +7,7 @@ import bcrypt from "bcrypt";
 import Todo from "./models/Todo.js";
 import User from "./models/User.js";
 import jwt from "jsonwebtoken";
+import { authMiddleware } from "./middlewares/authmiddleware.js";
 
 const app = express();
 
@@ -99,41 +100,72 @@ app.post("/api/auth/verify", (req, res) => {
   }
 });
 
-// CREATE TODO
-app.post("/todos", async (req, res) => {
+app.post("/todos", authMiddleware, async (req, res) => {
   try {
     const { title } = req.body;
 
-    const todo = await Todo.create({ title });
+    if (!title) {
+      return res.status(400).json({
+        message: "Title is required",
+      });
+    }
+    if (!req.userId) {
+      return res.status(401).json({
+        message: "Authentication required",
+      });
+    }
+    const todo = await Todo.create({
+      title,
+      owner: req.userId,
+    });
 
-    return res.status(201).json(todo);
+    res.status(201).json(todo);
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to create Todo",
+    res.status(500).json({
+      message: "Failed to create todo",
     });
   }
 });
 
-// READ ALL TODOS
-app.get("/todos", async (req, res) => {
+app.get("/todos", authMiddleware, async (req, res) => {
   try {
-    const todos = await Todo.find();
+    if (!req.userId) {
+      return res.status(401).json({
+        message: "Authentication required",
+      });
+    }
 
-    return res.json(todos);
+    const todos = await Todo.find({
+      owner: req.userId,
+    });
+
+    res.json(todos);
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to fetch Todos",
+    res.status(500).json({
+      message: "Failed to fetch todos",
     });
   }
 });
 
 // UPDATE TODO
-app.patch("/todos/:id", async (req, res) => {
+app.patch("/todos/:id", authMiddleware, async (req, res) => {
   try {
-    const updatedTodo = await Todo.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    if (!req.userId) {
+      return res.status(401).json({
+        message: "Authentication required",
+      });
+    }
+    const updatedTodo = await Todo.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        owner: req.userId,
+      },
+      req.body,
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
 
     if (!updatedTodo) {
       return res.status(404).json({
@@ -150,9 +182,17 @@ app.patch("/todos/:id", async (req, res) => {
 });
 
 // DELETE TODO
-app.delete("/todos/:id", async (req, res) => {
+app.delete("/todos/:id", authMiddleware, async (req, res) => {
   try {
-    const deletedTodo = await Todo.findByIdAndDelete(req.params.id);
+    if (!req.userId) {
+      return res.status(401).json({
+        message: "Authentication required",
+      });
+    }
+    const deletedTodo = await Todo.findOneAndDelete({
+      _id: req.params.id,
+      owner: req.userId,
+    });
 
     if (!deletedTodo) {
       return res.status(404).json({
