@@ -155,12 +155,25 @@ app.patch("/todos/:id", authMiddleware, async (req, res) => {
         message: "Authentication required",
       });
     }
+    const { title, completed } = req.body;
+
+    const updates: { title?: string; completed?: boolean } = {};
+
+    if (title !== undefined) updates.title = title;
+    if (completed !== undefined) updates.completed = completed;
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        message: "No valid fields provided for update",
+      });
+    }
+
     const updatedTodo = await Todo.findOneAndUpdate(
       {
         _id: req.params.id,
         owner: req.userId,
       },
-      req.body,
+      updates,
       {
         new: true,
         runValidators: true,
