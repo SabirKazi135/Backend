@@ -1,85 +1,103 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
+import User from "../models/User.js";
 import jwt from "jsonwebtoken";
-import { User } from "../models/User.js";
-
 const router = Router();
 
 router.post("/register", async (req, res) => {
   try {
-    const { email, password } = req.body as {
-      email?: string;
-      password?: string;
-    };
+    const { email, password } = req.body;
 
     if (!email || !password) {
-      res.status(400).json({ message: "Email and password are required" });
-      return;
+      return res.status(400).json({
+        message: "Email and password are required",
+      });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
-    const existingUser = await User.findOne({ email: normalizedEmail });
+    const normalizedEmail = String(email).trim().toLowerCase();
+
+    const existingUser = await User.findOne({
+      email: normalizedEmail,
+    });
 
     if (existingUser) {
-      res.status(409).json({ message: "Email is already registered" });
-      return;
+      return res.status(409).json({
+        message: "Email already registered",
+      });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(String(password), 10);
+
     const user = await User.create({
       email: normalizedEmail,
-      password: hashedPassword
+      password: hashedPassword,
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "User registered successfully",
-      user: { id: user._id.toString(), email: user.email }
+      user: {
+        id: user._id,
+        email: user.email,
+      },
     });
   } catch (error) {
-    console.error("Register error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({
+      message: "Failed to register user",
+    });
   }
 });
 
 router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body as {
-      email?: string;
-      password?: string;
-    };
+    const { email, password } = req.body;
 
     if (!email || !password) {
-      res.status(400).json({ message: "Email and password are required" });
-      return;
+      return res.status(400).json({
+        message: "Email and password are required",
+      });
     }
 
-    const user = await User.findOne({ email: email.trim().toLowerCase() });
+    const normalizedEmail = String(email).trim().toLowerCase();
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      res.status(401).json({ message: "Invalid email or password" });
-      return;
+    const user = await User.findOne({
+      email: normalizedEmail,
+    });
+
+    if (!user) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
     }
 
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      res.status(500).json({ message: "JWT_SECRET is not configured" });
-      return;
+    const isPasswordValid = await bcrypt.compare(
+      String(password),
+      user.password,
+    );
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
     }
 
     const token = jwt.sign(
       { userId: user._id.toString() },
-      secret,
-      { expiresIn: "1h" }
+      process.env.JWT_SECRET!,
+      { expiresIn: "1h" },
     );
 
-    res.json({
+    return res.status(200).json({
       message: "Login successful",
       token,
-      user: { id: user._id.toString(), email: user.email }
+      user: {
+        id: user._id,
+        email: user.email,
+      },
     });
   } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({
+      message: "Failed to login",
+    });
   }
 });
 

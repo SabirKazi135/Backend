@@ -1,42 +1,48 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-type JwtPayload = {
-  userId: string;
-};
-
 export function authMiddleware(
   req: Request,
   res: Response,
-  next: NextFunction
-): void {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : undefined;
-
-  if (!token) {
-    res.status(401).json({ message: "Authentication token required" });
-    return;
-  }
-
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    res.status(500).json({ message: "JWT_SECRET is not configured" });
-    return;
-  }
-
+  next: NextFunction,
+) {
   try {
-    const decoded = jwt.verify(token, secret) as JwtPayload;
+    const authHeader = req.headers.authorization;
 
-    if (typeof decoded.userId !== "string") {
-      res.status(401).json({ message: "Invalid token payload" });
-      return;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        message: "Authentication required",
+      });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const secret = process.env.JWT_SECRET;
+
+    if (!secret) {
+      return res.status(500).json({
+        message: "JWT_SECRET is not configured",
+      });
+    }
+
+    if (!token) {
+      return res.status(500).json({
+        message: "Token Invalid",
+      });
+    }
+
+    const decoded = jwt.verify(token, secret);
+
+    if (typeof decoded === "string" || typeof decoded.userId !== "string") {
+      return res.status(401).json({
+        message: "Invalid token",
+      });
     }
 
     req.userId = decoded.userId;
     next();
-  } catch {
-    res.status(401).json({ message: "Invalid or expired token" });
+  } catch (error) {
+    return res.status(401).json({
+      message: "Invalid or expired token",
+    });
   }
 }

@@ -5,36 +5,33 @@ const expenseSchema = new Schema(
     title: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
     },
     amount: {
       type: Number,
       required: true,
-      min: 0
+      min: 0,
     },
     type: {
       type: String,
       enum: ["expense", "income"],
       default: "expense",
-      required: true
     },
     date: {
       type: Date,
       default: Date.now,
-      required: true
     },
     notes: {
       type: String,
-      trim: true,
-      default: ""
+      default: "",
     },
     owner: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: true
-    }
+      required: true,
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-export const Expense = mongoose.model("Expense", expenseSchema);
+export default mongoose.model("Expense", expenseSchema);
