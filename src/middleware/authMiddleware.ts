@@ -25,8 +25,8 @@ export function authMiddleware(
     }
 
     if (!token) {
-      return res.status(500).json({
-        message: "Token Invalid",
+      return res.status(401).json({
+        message: "Invalid token",
       });
     }
 

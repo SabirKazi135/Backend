@@ -72,6 +72,11 @@ router.get("/:id", async (req, res) => {
         message: "Invalid expense ID",
       });
     }
+    if (!userId) {
+      return res.status(401).json({
+        message: "Authentication required",
+      });
+    }
 
     const expense = await Expense.findOne({
       _id: id,
@@ -100,6 +105,11 @@ router.patch("/:id", async (req, res) => {
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({
         message: "Invalid expense ID",
+      });
+    }
+    if (!userId) {
+      return res.status(401).json({
+        message: "Authentication required",
       });
     }
 
@@ -138,6 +148,43 @@ router.patch("/:id", async (req, res) => {
   } catch (error) {
     return res.status(400).json({
       message: "Failed to update expense",
+    });
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        message: "Invalid expense ID",
+      });
+    }
+    if (!userId) {
+      return res.status(401).json({
+        message: "Authentication required",
+      });
+    }
+
+    const expense = await Expense.findOneAndDelete({
+      _id: id,
+      owner: userId,
+    });
+
+    if (!expense) {
+      return res.status(404).json({
+        message: "Expense not found",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Expense deleted successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Failed to delete expense",
     });
   }
 });
