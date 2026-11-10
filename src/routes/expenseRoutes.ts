@@ -10,15 +10,22 @@ router.use(authMiddleware);
 router.get("/", async (req, res) => {
   try {
     const userId = req.userId;
+    const type = req.query.type;
 
     if (!userId || !mongoose.isValidObjectId(userId)) {
       return res.status(401).json({
         message: "Invalid authenticated user",
       });
     }
-
-    const expenses = await Expense.find({ owner: userId }).sort({ date: -1 });
-
+    if (type !== undefined && type !== "expense" && type !== "income") {
+      return res.status(400).json({
+        message: "Invalid type. Use expense or income",
+      });
+    }
+    const expenses = await Expense.find({
+      owner: userId,
+      ...(type !== undefined ? { type } : {}),
+    }).sort({ date: -1 });
     return res.status(200).json(expenses);
   } catch (error) {
     return res.status(500).json({
@@ -62,6 +69,16 @@ router.post("/", async (req, res) => {
   }
 });
 
+// router.get("/check-params", (req, res) => {
+//   const type = req.query.type;
+
+//   return res.json({
+//     message: "Filter received",
+//     type: type,
+//   });
+// });
+
+// sabir is best
 router.get("/:id", async (req, res) => {
   try {
     const userId = req.userId;
